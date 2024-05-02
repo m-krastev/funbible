@@ -1,0 +1,19 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "funbible"
+version = "0.0.1"
+description = "A shell utility to find Bible verses"
+readme = "README.md"
+authors = ["Matey Krastev <matey.krastev@outlook.com>"]
+repository = "https://github.com/m-krastev/funbible"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+rapidfuzz = "^3.0.0"
+pyperclip = "^1.8.2"
+
+[tool.poetry.scripts]
+funbible = "funbible.main:main"
