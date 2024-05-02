@@ -4,11 +4,12 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "funbible"
-version = "0.0.1"
+version = "0.0.1b"
 description = "A shell utility to find Bible verses"
 readme = "README.md"
 authors = ["Matey Krastev <matey.krastev@outlook.com>"]
 repository = "https://github.com/m-krastev/funbible"
+include = ["resources/*"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
