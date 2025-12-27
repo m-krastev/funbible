@@ -1,20 +1,42 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
+[project]
 name = "funbible"
-version = "0.0.1b"
-description = "A shell utility to find Bible verses"
+version = "0.1.0"
+description = "A feature-rich terminal Bible reader with version management and smart search"
 readme = "README.md"
-authors = ["Matey Krastev <matey.krastev@outlook.com>"]
-repository = "https://github.com/m-krastev/funbible"
-include = ["resources/*"]
+authors = [{ name = "Matey Krastev", email = "matey.krastev@outlook.com" }]
+requires-python = ">=3.9"
+keywords = ["bible", "terminal", "cli", "search", "christian"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Religion",
+]
+dependencies = [
+    "click>=8.0.0",
+    "rapidfuzz>=3.0.0",
+    "pyperclip>=1.8.2",
+    "requests>=2.31.0",
+    "rich>=13.0.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-rapidfuzz = "^3.0.0"
-pyperclip = "^1.8.2"
+[project.urls]
+Repository = "https://github.com/m-krastev/funbible"
 
-[tool.poetry.scripts]
+[project.scripts]
 funbible = "funbible.main:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "black>=23.0.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["funbible"]
+
+[tool.hatch.build.targets.sdist]
+include = ["funbible", "resources"]
