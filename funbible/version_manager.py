@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -97,27 +98,47 @@ def download_version(version_id: str, progress_callback=None) -> Tuple[bool, str
     ensure_dirs()
     
     try:
+        # Handle local file URLs (e.g., "data/bg_1940.json")
+        if url.startswith("data/"):
+            if progress_callback:
+                progress_callback(f"Copying {info['name']}...")
+            
+            # Local file - copy from docs/data
+            docs_data_dir = Path(__file__).parent.parent.parent / "docs" / "data"
+            source_path = docs_data_dir / url.replace("data/", "")
+            
+            if not source_path.exists():
+                return False, f"Local file not found: {source_path}"
+            
+            # Copy to versions directory
+            bible_path = VERSIONS_DIR / f"{version_id}.json"
+            shutil.copy2(source_path, bible_path)
+            
+            if progress_callback:
+                progress_callback(f"Successfully installed {info['name']}")
+            
+            return True, f"Successfully installed '{info['name']}'."
+        
+        # Remote URL - download
         if progress_callback:
             progress_callback(f"Downloading {info['name']}...")
         
         response = requests.get(url, timeout=60)
         response.raise_for_status()
         
-        # Parse and normalize the downloaded JSON
+        # Parse the downloaded JSON
         # Handle UTF-8 BOM by decoding with utf-8-sig
         content = response.content.decode('utf-8-sig')
         raw_data = json.loads(content)
-        normalized = normalize_bible_format(raw_data, version_id)
         
-        # Save normalized bible
+        # Expect array format: [{abbrev, book, chapters: [[verses]]}]
+        if not isinstance(raw_data, list):
+            return False, f"Invalid format: expected array format, got {type(raw_data).__name__}"
+        
+        # Save in array format
         bible_path = VERSIONS_DIR / f"{version_id}.json"
         with open(bible_path, "w", encoding="utf-8") as f:
-            json.dump(normalized["bible"], f, ensure_ascii=False)
-        
-        # Save lookup table
-        lookup_path = VERSIONS_DIR / f"{version_id}.lookup.json"
-        with open(lookup_path, "w", encoding="utf-8") as f:
-            json.dump(normalized["lookup"], f, ensure_ascii=False, indent=2)
+            json.dump(raw_data, f, ensure_ascii=False, indent=2)
         
         if progress_callback:
             progress_callback(f"Successfully installed {info['name']}")
@@ -128,42 +149,41 @@ def download_version(version_id: str, progress_callback=None) -> Tuple[bool, str
         return False, f"Failed to download: {e}"
     except (json.JSONDecodeError, KeyError) as e:
         return False, f"Failed to parse Bible data: {e}"
+    except (OSError, IOError) as e:
+        return False, f"Failed to copy file: {e}"
 
 
 def normalize_bible_format(raw_data: Any, version_id: str) -> Dict[str, Any]:
     """
-    Normalize various Bible JSON formats to our internal format.
+    Convert array format to internal object format for processing.
     
-    Our format: {book_id: {chapter: {verse: text}}}
+    Input format: [{abbrev, book, chapters: [[verses]]}]
+    Output format: {book_id: {chapter: {verse: text}}}
     Lookup format: {book_name: book_id}
     """
     bible = {}
     lookup = {}
     
-    # Handle thiagobodruk/bible format: [{abbrev, chapters: [[verses]]}]
-    if isinstance(raw_data, list) and len(raw_data) > 0:
-        if "chapters" in raw_data[0]:
-            for book_idx, book in enumerate(raw_data):
-                book_id = str(book_idx + 1)
-                book_name = ENGLISH_BOOKS[book_idx] if book_idx < len(ENGLISH_BOOKS) else f"Book {book_idx + 1}"
-                lookup[book_name] = book_id
-                
-                bible[book_id] = {}
-                for chapter_idx, verses in enumerate(book.get("chapters", [])):
-                    chapter_num = str(chapter_idx + 1)
-                    bible[book_id][chapter_num] = {}
-                    for verse_idx, verse_text in enumerate(verses):
-                        verse_num = str(verse_idx + 1)
-                        bible[book_id][chapter_num][verse_num] = verse_text
+    # Expect array format: [{abbrev, book, chapters: [[verses]]}]
+    if not isinstance(raw_data, list) or len(raw_data) == 0:
+        raise ValueError(f"Invalid format: expected array format, got {type(raw_data).__name__}")
     
-    # Handle our existing format
-    elif isinstance(raw_data, dict):
-        bible = raw_data
-        # Generate lookup from book IDs if needed
-        for book_id in bible.keys():
-            idx = int(book_id) - 1
-            if idx < len(ENGLISH_BOOKS):
-                lookup[ENGLISH_BOOKS[idx]] = book_id
+    if "chapters" not in raw_data[0]:
+        raise ValueError("Invalid array format: missing 'chapters' field")
+    
+    for book_idx, book in enumerate(raw_data):
+        book_id = str(book_idx + 1)
+        # Use book name from data, fallback to English name
+        book_name = book.get("book") or (ENGLISH_BOOKS[book_idx] if book_idx < len(ENGLISH_BOOKS) else f"Book {book_idx + 1}")
+        lookup[book_name] = book_id
+        
+        bible[book_id] = {}
+        for chapter_idx, verses in enumerate(book.get("chapters", [])):
+            chapter_num = str(chapter_idx + 1)
+            bible[book_id][chapter_num] = {}
+            for verse_idx, verse_text in enumerate(verses):
+                verse_num = str(verse_idx + 1)
+                bible[book_id][chapter_num][verse_num] = verse_text
     
     return {"bible": bible, "lookup": lookup}
 
@@ -182,19 +202,16 @@ def remove_version(version_id: str) -> Tuple[bool, str]:
         return False, f"Cannot remove bundled version '{version_id}'."
     
     bible_path = VERSIONS_DIR / f"{version_id}.json"
-    lookup_path = VERSIONS_DIR / f"{version_id}.lookup.json"
     
     if not bible_path.exists():
         return False, f"Version '{version_id}' is not installed."
     
     try:
         bible_path.unlink()
-        if lookup_path.exists():
-            lookup_path.unlink()
         
         # Reset default if this was the default
         if get_config_value("default_version") == version_id:
-            set_config_value("default_version", "biblia-1940")
+            set_config_value("default_version", "bg_bbd")
         
         return True, f"Successfully removed '{version_id}'."
     except OSError as e:

@@ -13,7 +13,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 
 # Default configuration
 DEFAULT_CONFIG = {
-    "default_version": "biblia-1940",
+    "default_version": "bg_bbd",
     "auto_copy": False,
     "color_output": True,
     "search_limit": 10,
@@ -21,47 +21,69 @@ DEFAULT_CONFIG = {
     "verse_newlines": True,  # If True, verses on separate lines; if False, joined with space
 }
 
-# Available versions for download (could be fetched from an API)
+# Available versions for download (matches docs/data/versions.json)
 AVAILABLE_VERSIONS = {
-    "biblia-1940": {
-        "name": "Bulgarian Bible 1940",
+    "bg_bbd": {
+        "name": "РИ ББД",
         "language": "bg",
         "bundled": True,
-        "description": "Bulgarian Protestant Bible, 1940 edition",
+        "description": "Ревизирано издание (Българско библейско дружество)",
     },
-    "biblia-revizirano": {
-        "name": "Bulgarian Bible Revised",
+    "bg_1940": {
+        "name": "BG1940",
         "language": "bg",
-        "bundled": True,
-        "description": "Bulgarian Protestant Bible, Revised edition",
+        "bundled": False,
+        "url": "data/bg_1940.json",
+        "description": "Българска Библия, ревизирана от 1940 г.",
     },
-    "kjv": {
+    "en_kjv": {
         "name": "King James Version",
         "language": "en",
         "bundled": False,
         "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json",
         "description": "King James Version (1611)",
     },
-    "asv": {
-        "name": "American Standard Version",
-        "language": "en",
-        "bundled": False,
-        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_asv.json",
-        "description": "American Standard Version (1901)",
-    },
-    "bbe": {
+    "en_bbe": {
         "name": "Bible in Basic English",
         "language": "en",
         "bundled": False,
         "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_bbe.json",
         "description": "Bible in Basic English",
     },
-    "web": {
-        "name": "World English Bible",
-        "language": "en",
+    "pt_nvi": {
+        "name": "Nova Versão Internacional",
+        "language": "pt",
         "bundled": False,
-        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_web.json",
-        "description": "World English Bible (Public Domain)",
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/pt_nvi.json",
+        "description": "Nova Versão Internacional (Portuguese)",
+    },
+    "es_rvr": {
+        "name": "Reina Valera",
+        "language": "es",
+        "bundled": False,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/es_rvr.json",
+        "description": "Reina Valera (Spanish)",
+    },
+    "ru_synodal": {
+        "name": "Синодальный перевод",
+        "language": "ru",
+        "bundled": False,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/ru_synodal.json",
+        "description": "Russian Synodal translation",
+    },
+    "fr_apee": {
+        "name": "Le Bible de I'Épée",
+        "language": "fr",
+        "bundled": False,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/fr_apee.json",
+        "description": "Le Bible de I'Épée (French)",
+    },
+    "de_schlachter": {
+        "name": "Schlachter",
+        "language": "de",
+        "bundled": False,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/de_schlachter.json",
+        "description": "Schlachter Bible (German)",
     },
 }
 
@@ -108,16 +130,27 @@ def set_config_value(key: str, value: Any) -> None:
 
 
 def get_installed_versions() -> Dict[str, Dict[str, Any]]:
-    """Get list of installed versions (bundled + downloaded)."""
+    """Get list of installed versions (bundled + local + downloaded)."""
     installed = {}
     
-    # Check bundled versions
-    base_dir = Path(__file__).parent.parent / "resources"
+    # Check bundled and local versions in docs/data directory (array format)
+    docs_data_dir = Path(__file__).parent.parent / "docs" / "data"
     for version_id, info in AVAILABLE_VERSIONS.items():
+        # Check if it's a local file (bundled or has local URL)
         if info.get("bundled"):
-            bible_path = base_dir / f"{version_id}.json"
+            # Bundled versions use the version_id as the file name
+            bible_path = docs_data_dir / f"{version_id}.json"
             if bible_path.exists():
                 installed[version_id] = {**info, "path": str(bible_path)}
+        elif info.get("url") and not info.get("url", "").startswith("http"):
+            # Local file (not bundled but available locally)
+            # URL format: "data/bg_1940.json" -> file name is bg_1940.json
+            url = info.get("url", "")
+            if url.startswith("data/"):
+                file_name = url.replace("data/", "")
+                bible_path = docs_data_dir / file_name
+                if bible_path.exists():
+                    installed[version_id] = {**info, "path": str(bible_path)}
     
     # Check downloaded versions
     if VERSIONS_DIR.exists():

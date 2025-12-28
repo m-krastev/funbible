@@ -51,33 +51,41 @@ class BibleApp:
         self.version_info = installed[version_id]
         
         bible_path = Path(self.version_info["path"])
-        lookup_path = bible_path.with_suffix(".lookup.json")
         
         try:
             with open(bible_path, "r", encoding="utf-8") as f:
                 raw_bible = json.load(f)
             
-            if lookup_path.exists():
-                with open(lookup_path, "r", encoding="utf-8") as f:
-                    raw_lookup = json.load(f)
-                    # Handle both {id: name} and {name: id} formats
-                    first_key = next(iter(raw_lookup.keys()), "")
-                    first_val = next(iter(raw_lookup.values()), "")
-                    if first_key.isdigit() or (first_val and not first_val.isdigit()):
-                        # Format: {id: name} -> swap to {name: id}
-                        self.books_lookup = {v: k for k, v in raw_lookup.items()}
-                    else:
-                        self.books_lookup = raw_lookup
-            else:
-                # Generate lookup from book keys
-                self.books_lookup = {k: k for k in raw_bible.keys()}
+            # Expect array format: [{abbrev, book, chapters: [[verses]]}]
+            if not isinstance(raw_bible, list):
+                print_error(f"Invalid format: expected array format, got {type(raw_bible).__name__}")
+                return False
             
+            # Convert array format to object format for internal use
+            bible_obj = {}
+            lookup_from_data = {}
+            
+            for book_idx, book in enumerate(raw_bible):
+                book_id = str(book_idx + 1)
+                book_name = book.get("book", f"Book {book_idx + 1}")
+                lookup_from_data[book_name] = book_id
+                
+                bible_obj[book_id] = {}
+                chapters = book.get("chapters", [])
+                for chapter_idx, verses in enumerate(chapters):
+                    chapter_num = str(chapter_idx + 1)
+                    bible_obj[book_id][chapter_num] = {}
+                    for verse_idx, verse_text in enumerate(verses):
+                        verse_num = str(verse_idx + 1)
+                        bible_obj[book_id][chapter_num][verse_num] = verse_text
+            
+            self.books_lookup = lookup_from_data
             self.books_lookup_inv = {v: k for k, v in self.books_lookup.items()}
             
             # Flatten the bible structure
             self.bible = {
                 (book, chapter, verse): text
-                for book, chapters in raw_bible.items()
+                for book, chapters in bible_obj.items()
                 for chapter, verses in chapters.items()
                 for verse, text in verses.items()
             }
