@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Biblia - Bible Reader</title>
+        <meta name="description"
+            content="A beautiful, offline-capable Bible reader with multiple translations, search, and verse copying.">
+        <meta name="theme-color" content="#0ea5e9">
+        <link rel="manifest" href="manifest.json">
+        <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3389/3389381.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3389/3389381.png">
+
+        <!-- Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap"
+            rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript>
+            <link
+                href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap"
+                rel="stylesheet">
+        </noscript>
+
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                darkMode: 'class',
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            sans: ['Inter', 'system-ui', 'sans-serif'],
+                            serif: ['Merriweather', 'Georgia', 'serif'],
+                        },
+                        colors: {
+                            primary: {
+                                50: '#f0f9ff',
+                                100: '#e0f2fe',
+                                200: '#bae6fd',
+                                300: '#7dd3fc',
+                                400: '#38bdf8',
+                                500: '#0ea5e9',
+                                600: '#0284c7',
+                                700: '#0369a1',
+                                800: '#075985',
+                                900: '#0c4a6e',
+                                950: '#082f49',
+                            },
+                            accent: {
+                                50: '#fdf4ff',
+                                100: '#fae8ff',
+                                200: '#f5d0fe',
+                                300: '#f0abfc',
+                                400: '#e879f9',
+                                500: '#d946ef',
+                                600: '#c026d3',
+                                700: '#a21caf',
+                                800: '#86198f',
+                                900: '#701a75',
+                            }
+                        }
+                    }
+                }
+            }
+        </script>
+
+        <!-- Fuse.js for fuzzy search -->
+        <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+
+        <!-- Custom Styles -->
+        <link rel="stylesheet" href="index.css">
+    </head>
+
+    <body
+        class="min-h-screen font-sans antialiased overflow-hidden bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay"
+            class="fixed inset-0 bg-white dark:bg-slate-900 flex items-center justify-center z-50 transition-opacity duration-500">
+            <div class="text-center">
+                <div
+                    class="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4">
+                </div>
+                <p class="text-lg text-slate-600 dark:text-slate-300" id="loading-text">Loading Bible...</p>
+            </div>
+        </div>
+
+        <!-- Main App Container -->
+        <div id="app" class="flex flex-col h-screen opacity-0 transition-opacity duration-500">
+
+            <!-- Header -->
+            <header
+                class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700/50 px-4 py-3 flex-shrink-0 sticky top-0 z-40">
+                <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                    <!-- Logo & Title -->
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary-500/25">
+                            <span style="user-select: none;">📖</span>
+                        </div>
+                        <h1 id="app-title"
+                            class="text-xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent hidden sm:block"
+                            data-i18n="app_title">
+                            Библия
+                        </h1>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="flex-1 max-w-xl">
+                        <div class="relative">
+                            <input type="text" id="search-input" placeholder="Search verses or enter reference..."
+                                data-i18n-placeholder="search_placeholder"
+                                class="w-full px-4 py-2.5 pl-11 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600/50 rounded-xl text-sm placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-slate-900 dark:text-slate-100">
+                            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <kbd
+                                class="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-slate-600 dark:text-slate-400 bg-slate-200 dark:bg-slate-600/50 rounded">
+                                <span>⌘</span>K
+                            </kbd>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-2">
+                        <!-- Version Selector -->
+                        <div class="relative">
+                            <select id="version-select" aria-label="Select Bible Version"
+                                class="appearance-none px-3 py-2 pr-8 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 cursor-pointer text-slate-900 dark:text-slate-100">
+                            </select>
+                            <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+
+                        <!-- Random Verse -->
+                        <button id="random-btn"
+                            class="p-2.5 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600/50 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors group"
+                            title="Random Verse">
+                            <svg class="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-primary-400 transition-colors"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
+
+                        <!-- Settings -->
+                        <button id="settings-btn"
+                            class="p-2.5 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600/50 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors group"
+                            title="Settings">
+                            <svg class="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-primary-400 transition-colors"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </button>
+
+                        <!-- Dark Mode Toggle -->
+                        <button id="theme-toggle"
+                            class="p-2.5 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600/50 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors group"
+                            title="Toggle Theme">
+                            <svg class="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-yellow-400 transition-colors dark:block hidden"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            <svg class="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-primary-400 transition-colors dark:hidden"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <div class="flex flex-1 overflow-hidden">
+
+                <!-- Sidebar - Book Navigation -->
+                <aside id="sidebar"
+                    class="w-64 bg-white dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700/50 flex-shrink-0 overflow-y-auto hidden lg:block">
+                    <div class="p-4">
+                        <h2 class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 px-2"
+                            data-i18n="books_header">Книги</h2>
+                        <nav id="book-list" class="space-y-1.5">
+                            <!-- Books populated by JS -->
+                        </nav>
+                    </div>
+                </aside>
+
+                <!-- Mobile Sidebar Toggle -->
+                <button id="sidebar-toggle" aria-label="Toggle Sidebar"
+                    class="fixed bottom-4 left-4 z-30 lg:hidden p-3 bg-primary-600 rounded-full shadow-lg shadow-primary-500/25 hover:bg-primary-500 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+
+                <!-- Main Content -->
+                <main class="flex-1 overflow-y-auto">
+                    <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+
+                        <!-- Current Location Breadcrumb -->
+                        <div id="breadcrumb-container" class="flex items-center justify-between mb-6">
+                            <div id="breadcrumb"
+                                class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                                <div class="relative">
+                                    <select id="breadcrumb-book" aria-label="Select Book"
+                                        class="appearance-none bg-transparent font-bold text-slate-700 dark:text-slate-300 hover:text-primary-500 transition-colors pr-6 cursor-pointer focus:outline-none">
+                                        <option value="" disabled selected data-i18n="select_book">Select a book</option>
+                                    </select>
+                                    <svg class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                                
+                                <div class="hidden flex items-center gap-2" id="breadcrumb-chapter-container">
+                                    <span class="text-slate-400" id="breadcrumb-sep">/</span>
+                                    <div class="relative">
+                                        <select id="breadcrumb-chapter" aria-label="Select Chapter"
+                                            class="appearance-none bg-transparent font-bold text-slate-700 dark:text-slate-300 hover:text-primary-500 transition-colors pr-6 cursor-pointer focus:outline-none">
+                                        </select>
+                                        <svg class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Split View Toggle (Moved to Reader) -->
+                            <button id="split-view-toggle"
+                                class="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-primary-500 dark:hover:text-primary-400 hover:border-primary-500/50 transition-all group"
+                                title="Split View" data-i18n-title="split_view">
+                                <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                </svg>
+                                <span data-i18n="split_view" class="uppercase tracking-wider">Compare</span>
+                            </button>
+                        </div>
+
+                        <!-- Chapter Selector (shown after book selected) -->
+                        <div id="chapter-selector" class="hidden mb-6">
+                            <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-3"
+                                data-i18n="select_chapter">Select
+                                Chapter</h3>
+                            <div id="chapter-grid" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+                                <!-- Chapters populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Verses Display -->
+                        <div id="verses-container" class="space-y-1">
+                            <!-- Welcome Message -->
+                            <div id="welcome-message" class="text-center py-12">
+                                <div
+                                    class="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 flex items-center justify-center">
+                                    <span class="text-5xl" style="user-select: none;">📖</span>
+                                </div>
+                                <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2"
+                                    data-i18n="welcome_title">Welcome to
+                                    Biblia</h2>
+                                <p class="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-6"
+                                    data-i18n="welcome_text">
+                                    Select a book from the sidebar, search for verses, or try a random verse to get
+                                    started.
+                                </p>
+                                <div class="flex flex-wrap justify-center gap-3">
+                                    <button id="welcome-random"
+                                        class="px-4 py-2 bg-primary-600 hover:bg-primary-500 rounded-lg font-medium transition-colors"
+                                        data-i18n="random_button">
+                                        <span style="user-select: none;">🎲</span> Random Verse
+                                    </button>
+                                    <button id="welcome-search"
+                                        class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-lg font-medium transition-colors"
+                                        data-i18n="search_button">
+                                        <span style="user-select: none;">🔍</span> Search
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Split View Bible Select (visible in split mode) -->
+                            <div id="split-version-select-container"
+                                class="hidden mb-4 p-4 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                                <label class="text-xs font-bold text-slate-400 uppercase mb-2 block"
+                                    data-i18n="compare_with">Compare with:</label>
+                                <select id="split-version-select"
+                                    class="w-full bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600 rounded-lg text-sm p-2 text-slate-900 dark:text-slate-100">
+                                    <option value="" data-i18n="none">None</option>
+                                </select>
+                            </div>
+
+                            <!-- Verses Layout -->
+                            <div id="verses-layout" class="grid grid-cols-1 gap-6">
+                                <div id="primary-verses" class="space-y-1"></div>
+                                <div id="secondary-verses" class="space-y-1 hidden"></div>
+                            </div>
+                        </div>
+
+                        <!-- Search Results -->
+                        <div id="search-results" class="hidden space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h3 id="search-results-title"
+                                    class="text-lg font-semibold text-slate-800 dark:text-slate-200"></h3>
+                                <button id="close-search"
+                                    class="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="search-results-list" class="space-y-3">
+                                <!-- Search results populated by JS -->
+                            </div>
+                            <button id="load-more-results"
+                                class="hidden w-full py-2 bg-slate-200 dark:bg-slate-700/50 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg text-sm font-medium transition-colors">
+                                Load More Results
+                            </button>
+                        </div>
+                    </div>
+                </main>
+            </div>
+
+            <!-- Verse Actions Modal -->
+            <div id="verse-modal"
+                class="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-2xl p-4 hidden flex flex-col gap-3 min-w-[200px]">
+                <div class="flex items-center justify-between gap-4">
+                    <span id="modal-ref" class="text-xs font-bold text-primary-400"></span>
+                    <button id="close-modal"
+                        class="text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300">✕</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="modal-copy"
+                        class="flex flex-col items-center gap-1 p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors">
+                        <span class="text-lg">📋</span>
+                        <span class="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300"
+                            data-i18n="copy">Copy</span>
+                    </button>
+                    <button id="modal-clear-highlight"
+                        class="flex flex-col items-center gap-1 p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors">
+                        <span class="text-lg">✨</span>
+                        <span class="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300"
+                            data-i18n="clear">Clear</span>
+                    </button>
+                </div>
+                <div>
+                    <span class="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-2 block"
+                        data-i18n="highlight_color">Highlight Color</span>
+                    <div class="grid grid-cols-5 gap-2" id="color-palette">
+                        <button
+                            class="w-6 h-6 rounded-full bg-yellow-400/40 border border-yellow-400 hover:scale-110 transition-transform"
+                            data-color="rgba(250, 204, 21, 0.4)"></button>
+                        <button
+                            class="w-6 h-6 rounded-full bg-green-400/40 border border-green-400 hover:scale-110 transition-transform"
+                            data-color="rgba(74, 222, 128, 0.4)"></button>
+                        <button
+                            class="w-6 h-6 rounded-full bg-blue-400/40 border border-blue-400 hover:scale-110 transition-transform"
+                            data-color="rgba(96, 165, 250, 0.4)"></button>
+                        <button
+                            class="w-6 h-6 rounded-full bg-purple-400/40 border border-purple-400 hover:scale-110 transition-transform"
+                            data-color="rgba(192, 132, 252, 0.4)"></button>
+                        <button
+                            class="w-6 h-6 rounded-full bg-red-400/40 border border-red-400 hover:scale-110 transition-transform"
+                            data-color="rgba(248, 113, 113, 0.4)"></button>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal"
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300">
+            <div
+                class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-2xl w-full max-w-md mx-4 shadow-2xl transform scale-95 transition-transform duration-300">
+                <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700/50">
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100" data-i18n="settings_title">
+                        Settings</h3>
+                    <button id="close-settings"
+                        class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-4 space-y-4">
+                    <!-- Version Management -->
+                    <div>
+                        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
+                            data-i18n="bible_versions">Bible Versions</h4>
+                        <div id="version-list" class="space-y-2 max-h-48 overflow-y-auto">
+                            <!-- Versions populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Default Version -->
+                    <div>
+                        <label class="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2"
+                            data-i18n="default_version">Default
+                            Version</label>
+                        <select id="default-version-select"
+                            class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-slate-900 dark:text-slate-100">
+                        </select>
+                    </div>
+
+                    <!-- Font Size -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2"
+                                data-i18n="font_size">Font
+                                Size</label>
+                            <div class="flex items-center gap-3">
+                                <input type="range" id="font-size-slider" min="14" max="32" value="18"
+                                    class="flex-1 accent-primary-500">
+                                <span id="font-size-value"
+                                    class="text-sm font-mono text-slate-700 dark:text-slate-300 w-10">18px</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2"
+                                data-i18n="line_height">Line
+                                Height</label>
+                            <div class="flex items-center gap-3">
+                                <input type="range" id="line-height-slider" min="1.2" max="2.4" step="0.1" value="1.6"
+                                    class="flex-1 accent-primary-500">
+                                <span id="line-height-value"
+                                    class="text-sm font-mono text-slate-700 dark:text-slate-300 w-10">1.6</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Font Family & App Language -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2"
+                                data-i18n="font_family">Font
+                                Family</label>
+                            <div class="flex flex-col gap-2">
+                                <button id="font-serif-btn"
+                                    class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-700/50 text-sm font-serif hover:border-primary-500/50 transition-all text-slate-800 dark:text-slate-200">
+                                    Serif
+                                </button>
+                                <button id="font-sans-btn"
+                                    class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-700/50 text-sm font-sans hover:border-primary-500/50 transition-all text-slate-800 dark:text-slate-200">
+                                    Sans-serif
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2"
+                                data-i18n="app_language">App
+                                Language</label>
+                            <button id="lang-toggle"
+                                class="w-full px-3 py-4 bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600/50 rounded-xl text-lg font-bold hover:bg-slate-200 dark:hover:bg-slate-600/50 hover:border-primary-500 transition-all uppercase flex items-center justify-center gap-2 text-slate-800 dark:text-slate-100"
+                                title="Switch Language">
+                                <span style="user-select: none;">🌐</span> <span id="lang-text">EN</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Clear Cache -->
+                    <div class="pt-2 border-t border-slate-200 dark:border-slate-700/50">
+                        <button id="clear-cache"
+                            class="w-full py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm font-medium transition-colors"
+                            data-i18n="clear_cache">
+                            Clear Downloaded Versions
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2">
+            <!-- Toasts will be appended here -->
+        </div>
+
+        <!-- Scripts -->
+        <script type="module" src="app.js"></script>
+    </body>
+
+</html>

@@ -1,0 +1,65 @@
+{
+    "bg_bbd": {
+        "name": "РИ ББД",
+        "language": "bg",
+        "bundled": true,
+        "url": "data/bg_bbd.json",
+        "description": "Ревизирано издание (Българско библейско дружество)"
+    },
+    "bg_1940": {
+        "name": "BG1940",
+        "language": "bg",
+        "bundled": false,
+        "url": "data/bg_1940.json",
+        "description": "Българска Библия, ревизирана от 1940 г."
+    },
+    "en_kjv": {
+        "name": "King James Version",
+        "language": "en",
+        "bundled": false,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json",
+        "description": "King James Version (1611)"
+    },
+    "en_bbe": {
+        "name": "Bible in Basic English",
+        "language": "en",
+        "bundled": false,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_bbe.json",
+        "description": "Bible in Basic English"
+    },
+    "pt_nvi": {
+        "name": "Nova Versão Internacional",
+        "language": "pt",
+        "bundled": false,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/pt_nvi.json",
+        "description": "Nova Versão Internacional (Portuguese)"
+    },
+    "es_rvr": {
+        "name": "Reina Valera",
+        "language": "es",
+        "bundled": false,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/es_rvr.json",
+        "description": "Reina Valera (Spanish)"
+    },
+    "ru_synodal": {
+        "name": "Синодальный перевод",
+        "language": "ru",
+        "bundled": false,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/ru_synodal.json",
+        "description": "Russian Synodal translation"
+    },
+    "fr_apee": {
+        "name": "Le Bible de I'Épée",
+        "language": "fr",
+        "bundled": false,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/fr_apee.json",
+        "description": "Le Bible de I'Épée (French)"
+    },
+    "de_schlachter": {
+        "name": "Schlachter",
+        "language": "de",
+        "bundled": false,
+        "url": "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/de_schlachter.json",
+        "description": "Schlachter Bible (German)"
+    }
+}
