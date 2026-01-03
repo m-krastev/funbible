@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "funbible"
-version = "0.1.0"
+version = "0.1.1"
 description = "A feature-rich terminal Bible reader with version management and smart search"
 readme = "README.md"
 authors = [{ name = "Matey Krastev", email = "matey.krastev@outlook.com" }]
@@ -39,7 +39,7 @@ dev = ["pytest>=7.0.0", "black>=23.0.0"]
 packages = ["funbible"]
 
 [tool.hatch.build.targets.sdist]
-include = ["funbible"]
+include = ["funbible", "resources"]
 
 [tool.hatch.build.force-include]
 "resources" = "funbible/resources"
