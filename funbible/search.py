@@ -14,18 +14,19 @@ def hybrid_search(
 ) -> List[Dict]:
     """
     Hybrid search combining exact substring match and fuzzy matching.
-    
+
+    Results are sorted by book order, with exact matches appearing first.
+
     Priority:
-    1. Exact case-insensitive substring matches (highest relevance)
-    2. Fuzzy matches using token_set_ratio
-    
+    1. Exact case-insensitive substring matches (sorted by book order)
+    2. Fuzzy matches using token_set_ratio (sorted by book order)
+
     Returns list of dicts with keys: text, reference, score, match_type
     """
-    results = []
     query_lower = query.lower()
     seen_keys = set()
-    
-    # Phase 1: Exact substring matches
+
+    # Phase 1: Find all exact substring matches
     exact_matches = []
     for key, text in bible.items():
         if query_lower in text.lower():
@@ -39,37 +40,42 @@ def hybrid_search(
                 "match_type": "exact",
             })
             seen_keys.add(key)
-    
-    # Sort exact matches by position of match (earlier = more relevant)
-    exact_matches.sort(key=lambda x: x["text"].lower().find(query_lower))
-    results.extend(exact_matches[:limit])
-    
-    # Phase 2: Fuzzy matches (if we need more results)
-    remaining = limit - len(results)
-    if remaining > 0:
-        # Filter out already found verses
+
+    # Sort exact matches by biblical order
+    exact_matches.sort(key=lambda r: (int(r["key"][0]), int(r["key"][1]), int(r["key"][2])))
+
+    # Phase 2: Find fuzzy matches from the remaining verses if needed
+    fuzzy_matches = []
+    if len(exact_matches) < limit:
         candidates = {k: v for k, v in bible.items() if k not in seen_keys}
-        
-        fuzzy_matches = process.extract(
+        needed = limit - len(exact_matches)
+
+        fuzzy_results = process.extract(
             query,
             candidates,
             scorer=fuzz.token_set_ratio,
-            limit=remaining,
+            limit=needed,
             score_cutoff=fuzzy_threshold,
         )
-        
-        for text, score, key in fuzzy_matches:
+
+        for text, score, key in fuzzy_results:
             book_name = books_lookup_inv.get(key[0], key[0])
             reference = f"{book_name} {key[1]}:{key[2]}"
-            results.append({
+            fuzzy_matches.append({
                 "text": text,
                 "reference": reference,
                 "key": key,
                 "score": score,
                 "match_type": "fuzzy",
             })
-    
-    return results
+
+        # Sort fuzzy matches by biblical order
+        fuzzy_matches.sort(key=lambda r: (int(r["key"][0]), int(r["key"][1]), int(r["key"][2])))
+
+    # Combine and return
+    all_results = exact_matches + fuzzy_matches
+
+    return all_results
 
 
 def search_by_reference(

@@ -1,5 +1,6 @@
 """Configuration management for FunBible."""
 
+import importlib.resources
 import json
 import os
 from pathlib import Path
@@ -132,26 +133,21 @@ def set_config_value(key: str, value: Any) -> None:
 def get_installed_versions() -> Dict[str, Dict[str, Any]]:
     """Get list of installed versions (bundled + local + downloaded)."""
     installed = {}
-    
-    # Check bundled and local versions in docs/data directory (array format)
-    docs_data_dir = Path(__file__).parent.parent / "docs" / "data"
-    for version_id, info in AVAILABLE_VERSIONS.items():
-        # Check if it's a local file (bundled or has local URL)
-        if info.get("bundled"):
-            # Bundled versions use the version_id as the file name
-            bible_path = docs_data_dir / f"{version_id}.json"
-            if bible_path.exists():
-                installed[version_id] = {**info, "path": str(bible_path)}
-        elif info.get("url") and not info.get("url", "").startswith("http"):
-            # Local file (not bundled but available locally)
-            # URL format: "data/bg_1940.json" -> file name is bg_1940.json
-            url = info.get("url", "")
-            if url.startswith("data/"):
-                file_name = url.replace("data/", "")
-                bible_path = docs_data_dir / file_name
-                if bible_path.exists():
-                    installed[version_id] = {**info, "path": str(bible_path)}
-    
+
+    # Check for bundled versions included with the package
+    try:
+        # This refers to the 'resources' directory inside the 'funbible' package
+        bundled_data_dir = importlib.resources.files('funbible') / 'resources'
+        if bundled_data_dir.is_dir():
+            for f in bundled_data_dir.glob("*.json"):
+                version_id = f.stem
+                if version_id in AVAILABLE_VERSIONS and not version_id.endswith(".lookup"):
+                    info = AVAILABLE_VERSIONS[version_id]
+                    installed[version_id] = {**info, "path": str(f)}
+    except (ModuleNotFoundError, FileNotFoundError):
+        # This fallback is for running from source, where 'resources' is at the top level
+        pass
+
     # Check downloaded versions
     if VERSIONS_DIR.exists():
         for json_file in VERSIONS_DIR.glob("*.json"):
@@ -163,7 +159,7 @@ def get_installed_versions() -> Dict[str, Dict[str, Any]]:
                     "bundled": False,
                 })
                 installed[version_id] = {**info, "path": str(json_file)}
-    
+
     return installed
 
 

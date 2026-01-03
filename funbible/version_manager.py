@@ -98,27 +98,6 @@ def download_version(version_id: str, progress_callback=None) -> Tuple[bool, str
     ensure_dirs()
     
     try:
-        # Handle local file URLs (e.g., "data/bg_1940.json")
-        if url.startswith("data/"):
-            if progress_callback:
-                progress_callback(f"Copying {info['name']}...")
-            
-            # Local file - copy from docs/data
-            docs_data_dir = Path(__file__).parent.parent.parent / "docs" / "data"
-            source_path = docs_data_dir / url.replace("data/", "")
-            
-            if not source_path.exists():
-                return False, f"Local file not found: {source_path}"
-            
-            # Copy to versions directory
-            bible_path = VERSIONS_DIR / f"{version_id}.json"
-            shutil.copy2(source_path, bible_path)
-            
-            if progress_callback:
-                progress_callback(f"Successfully installed {info['name']}")
-            
-            return True, f"Successfully installed '{info['name']}'."
-        
         # Remote URL - download
         if progress_callback:
             progress_callback(f"Downloading {info['name']}...")
